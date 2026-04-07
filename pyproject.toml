@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "truthbrush-oil-study"
+version = "0.1.0"
+description = "Event-study pipeline for presidential Truth Social posts vs. oil futures"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pandas>=2.2",
+  "numpy>=2.0",
+  "scipy>=1.13",
+  "statsmodels>=0.14",
+  "matplotlib>=3.9",
+  "seaborn>=0.13",
+  "python-dateutil>=2.9",
+  "pydantic>=2.8",
+  "typer>=0.12",
+  "truthbrush>=0.2.5",
+]
+
+[project.scripts]
+truthbrush-oil-study = "truthbrush_oil_study.cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=5.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
