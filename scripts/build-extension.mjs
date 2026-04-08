@@ -87,11 +87,11 @@ async function copyStaticFiles() {
   }
 }
 
-export async function buildExtension() {
+export async function buildExtension({ bundleScripts: bundleScriptsImpl = bundleScripts, copyStaticFiles: copyStaticFilesImpl = copyStaticFiles } = {}) {
   await rm(outputRoot, { recursive: true, force: true });
   await mkdir(outputRoot, { recursive: true });
-  await bundleScripts();
-  await copyStaticFiles();
+  await bundleScriptsImpl();
+  await copyStaticFilesImpl();
   return outputRoot;
 }
 
