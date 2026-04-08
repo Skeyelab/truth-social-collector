@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Truth Social Collector",
+  "version": "0.1.0",
+  "description": "Periodically collect Trump Truth Social posts from an authenticated browser session and upload them to a webhook.",
+  "action": {
+    "default_title": "Truth Social Collector",
+    "default_popup": "src/popup.html"
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "permissions": ["alarms", "storage", "tabs"],
+  "host_permissions": ["https://truthsocial.com/*", "<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["https://truthsocial.com/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "src/options.html"
+}

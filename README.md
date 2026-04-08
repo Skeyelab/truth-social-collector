@@ -3,8 +3,7 @@
 This project builds a reproducible event-study pipeline to test whether presidential Truth Social posts are associated with short-horizon moves in oil futures.
 
 ## What it does
-
-- pulls Truth Social posts via `truthbrush`
+- collects Truth Social posts via a browser-session extension or `truthbrush` where possible
 - normalizes posts into a stable schema
 - ingests oil price series
 - computes event-window returns

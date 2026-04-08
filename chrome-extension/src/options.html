@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Truth Social Collector Settings</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="panel wide">
+      <h1>Settings</h1>
+      <div class="field">
+        <label>Handle</label>
+        <input id="handle" type="text" spellcheck="false" />
+      </div>
+      <div class="field">
+        <label>Interval (minutes)</label>
+        <input id="intervalMinutes" type="number" min="1" step="1" />
+      </div>
+      <div class="field">
+        <label>Webhook URL</label>
+        <input id="webhookUrl" type="url" spellcheck="false" placeholder="https://..." />
+      </div>
+      <div class="field inline">
+        <label><input id="enabled" type="checkbox" /> Enabled</label>
+      </div>
+      <div class="buttons">
+        <button id="save">Save settings</button>
+        <button id="runNow">Run now</button>
+      </div>
+      <pre id="status" class="status"></pre>
+      <p class="hint">This collector requires an open, logged-in Truth Social tab.</p>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>
