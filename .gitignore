@@ -10,6 +10,7 @@ __pycache__/
 htmlcov/
 dist/
 build/
+*.zip
 .DS_Store
 *.egg-info/
 .hermes/
