@@ -3,6 +3,7 @@ import { showBanner, hideBanner, renderState } from './ui.js';
 const handleEl = document.getElementById('handle');
 const intervalEl = document.getElementById('intervalMinutes');
 const webhookEl = document.getElementById('webhookUrl');
+const uploadAllItemsEl = document.getElementById('uploadAllItems');
 const enabledEl = document.getElementById('enabled');
 const statusEl = document.getElementById('status');
 
@@ -13,8 +14,9 @@ async function loadState() {
   handleEl.value = config.handle || 'realDonaldTrump';
   intervalEl.value = config.intervalMinutes || 15;
   webhookEl.value = config.webhookUrl || '';
+  uploadAllItemsEl.checked = Boolean(config.uploadAllItems);
   enabledEl.checked = Boolean(config.enabled);
-  renderState(state);
+  renderState(state, config);
   statusEl.textContent = JSON.stringify({ config, state }, null, 2);
 }
 
@@ -26,6 +28,7 @@ async function save() {
       handle: handleEl.value.trim() || 'realDonaldTrump',
       intervalMinutes: Number(intervalEl.value) || 15,
       webhookUrl: webhookEl.value.trim(),
+      uploadAllItems: uploadAllItemsEl.checked,
       enabled: enabledEl.checked,
     },
   });
@@ -43,9 +46,13 @@ async function runNow() {
   if (!response.ok) {
     showBanner(`⚠ ${response.error || 'collector failed'}`, 'error');
   } else {
-    const msg = response.newCount
-      ? `✓ ${response.newCount} new post(s) uploaded`
-      : '✓ Collected — no new posts';
+    const msg = uploadAllItemsEl.checked
+      ? (response.uploadedCount
+        ? `✓ ${response.uploadedCount} post(s) uploaded`
+        : '✓ Collected — no posts uploaded')
+      : (response.newCount
+        ? `✓ ${response.newCount} new post(s) uploaded`
+        : '✓ Collected — no new posts');
     showBanner(msg, 'ok');
   }
   statusEl.textContent = JSON.stringify(response, null, 2);

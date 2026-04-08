@@ -46,3 +46,4 @@ test('buildExtension writes the HTML, CSS, and manifest assets into dist', async
   assert.ok(existsSync(`${outDir}/options.html`));
   assert.ok(existsSync(`${outDir}/styles.css`));
 });
+
