@@ -76,7 +76,33 @@ button:hover {
   background: #2a3144;
 }
 
-.status {
+.status-banner {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.status-banner.ok {
+  background: #0d2b1a;
+  border: 1px solid #1a5c30;
+  color: #4ade80;
+}
+
+.status-banner.error {
+  background: #2b0d0d;
+  border: 1px solid #5c1a1a;
+  color: #f87171;
+}
+
+.status-banner.warning {
+  background: #2b200d;
+  border: 1px solid #5c3d1a;
+  color: #fbbf24;
+}
+
+
   min-height: 100px;
   max-height: 320px;
   overflow: auto;

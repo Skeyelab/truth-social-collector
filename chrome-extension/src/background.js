@@ -1,3 +1,5 @@
+import { compareIdsDesc, dedupeNewPosts, buildUploadPayload } from './utils.js';
+
 const DEFAULT_CONFIG = {
   handle: 'realDonaldTrump',
   intervalMinutes: 15,
@@ -64,19 +66,6 @@ async function collectFromTab(tabId, config) {
   return response.payload;
 }
 
-function compareIdsDesc(a, b) {
-  const ai = BigInt(a.id);
-  const bi = BigInt(b.id);
-  if (ai === bi) return 0;
-  return ai > bi ? -1 : 1;
-}
-
-function dedupeNewPosts(posts, lastSeenId) {
-  const sorted = [...posts].sort(compareIdsDesc);
-  if (!lastSeenId) return sorted;
-  const last = BigInt(lastSeenId);
-  return sorted.filter((post) => BigInt(post.id) > last);
-}
 
 async function uploadWebhook(webhookUrl, payload) {
   if (!webhookUrl) return null;
@@ -116,14 +105,13 @@ async function runCollector(trigger = 'manual') {
     const newPosts = dedupeNewPosts(posts, lastSeenId);
     const newestId = posts.length ? String(posts[0].id) : lastSeenId;
 
-    const uploadPayload = {
+    const uploadPayload = buildUploadPayload({
       trigger,
-      collectedAt: new Date().toISOString(),
       handle: config.handle,
       account: payload.account,
       newPosts,
       allPosts: posts,
-    };
+    });
 
     if (newPosts.length && config.webhookUrl) {
       await uploadWebhook(config.webhookUrl, uploadPayload);

@@ -1,3 +1,5 @@
+import { showBanner, hideBanner, renderState } from './ui.js';
+
 const handleEl = document.getElementById('handle');
 const intervalEl = document.getElementById('intervalMinutes');
 const webhookEl = document.getElementById('webhookUrl');
@@ -12,10 +14,12 @@ async function loadState() {
   intervalEl.value = config.intervalMinutes || 15;
   webhookEl.value = config.webhookUrl || '';
   enabledEl.checked = Boolean(config.enabled);
+  renderState(state);
   statusEl.textContent = JSON.stringify({ config, state }, null, 2);
 }
 
 async function save() {
+  hideBanner();
   const response = await chrome.runtime.sendMessage({
     type: 'SAVE_CONFIG',
     config: {
@@ -25,11 +29,25 @@ async function save() {
       enabled: enabledEl.checked,
     },
   });
+  if (!response.ok) {
+    showBanner(`⚠ Save failed: ${response.error || 'unknown error'}`, 'error');
+  } else {
+    showBanner('✓ Settings saved', 'ok');
+  }
   statusEl.textContent = JSON.stringify(response, null, 2);
 }
 
 async function runNow() {
+  hideBanner();
   const response = await chrome.runtime.sendMessage({ type: 'RUN_COLLECTOR_NOW' });
+  if (!response.ok) {
+    showBanner(`⚠ ${response.error || 'collector failed'}`, 'error');
+  } else {
+    const msg = response.newCount
+      ? `✓ ${response.newCount} new post(s) uploaded`
+      : '✓ Collected — no new posts';
+    showBanner(msg, 'ok');
+  }
   statusEl.textContent = JSON.stringify(response, null, 2);
 }
 
