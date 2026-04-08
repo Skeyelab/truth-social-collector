@@ -8,7 +8,7 @@ from typing import Iterable
 
 from dateutil.parser import isoparse
 
-from .models import Post
+from .models import Post, ThreadContext
 
 
 ENV_USERNAME = "TRUTHSOCIAL_USERNAME"
@@ -110,3 +110,101 @@ def fetch_user_statuses(
         for raw_post in _extract_posts_from_page(page):
             posts.append(normalize_post(raw_post))
     return posts
+
+
+def _build_api(env: dict[str, str] | None = None):
+    """Instantiate a truthbrush Api object using credentials from *env*."""
+    from truthbrush.api import Api
+
+    full_env = load_truthsocial_env(env)
+    return Api(
+        username=full_env.get(ENV_USERNAME),
+        password=full_env.get(ENV_PASSWORD),
+        token=full_env.get(ENV_TOKEN),
+    )
+
+
+def _fetch_status_context(api, post_id: str) -> dict:
+    """Fetch the full thread context (ancestors + descendants) for a status.
+
+    This calls the ``/v1/statuses/{id}/context`` endpoint which returns a dict
+    with ``"ancestors"`` and ``"descendants"`` lists.  The truthbrush library
+    does not expose this endpoint through a public method, so we use its
+    internal ``_get`` helper which applies the same authentication and rate-
+    limiting logic as all other API calls.
+    """
+    result = api._get(f"/v1/statuses/{post_id}/context")
+    return result if isinstance(result, dict) else {}
+
+
+def fetch_post_thread(
+    post_id: str,
+    *,
+    max_replies: int = 40,
+    include_ancestors: bool = False,
+    only_direct_replies: bool = False,
+    env: dict[str, str] | None = None,
+) -> ThreadContext:
+    """Fetch thread context (replies and optionally ancestors) for a post.
+
+    Descendants are fetched via the truthbrush API and deduped by status ID.
+    Ancestors (parent posts up to the thread root) are fetched only when
+    *include_ancestors* is ``True``.  Pagination is bounded by *max_replies*
+    to prevent runaway collection.
+
+    Args:
+        post_id: The status ID whose thread context should be collected.
+        max_replies: Maximum number of descendant replies to collect (default 40).
+        include_ancestors: When ``True``, also fetch ancestor/parent posts.
+        only_direct_replies: When ``True``, collect only direct replies to
+            *post_id* rather than the full reply tree.
+        env: Optional mapping of environment variables used for authentication.
+
+    Returns:
+        A :class:`~truthbrush_oil_study.models.ThreadContext` containing deduped
+        ancestors and descendants.
+    """
+    api = _build_api(env)
+    seen: set[str] = set()
+
+    # --- descendants ---------------------------------------------------------
+    descendants: list[Post] = []
+    for raw in api.pull_comments(
+        post_id,
+        include_all=False,
+        only_first=only_direct_replies,
+        top_num=max_replies,
+    ):
+        if not isinstance(raw, dict):
+            continue
+        pid = str(raw.get("id") or "")
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        try:
+            descendants.append(normalize_post(raw))
+        except (ValueError, KeyError):
+            pass
+
+    # --- ancestors (optional) ------------------------------------------------
+    ancestors: list[Post] = []
+    if include_ancestors:
+        context = api._get(f"/v1/statuses/{post_id}/context")
+        if isinstance(context, dict):
+            for raw in context.get("ancestors") or []:
+                if not isinstance(raw, dict):
+                    continue
+                aid = str(raw.get("id") or "")
+                if not aid or aid in seen:
+                    continue
+                seen.add(aid)
+                try:
+                    ancestors.append(normalize_post(raw))
+                except (ValueError, KeyError):
+                    pass
+
+    return ThreadContext(
+        post_id=post_id,
+        ancestors=tuple(ancestors),
+        descendants=tuple(descendants),
+    )
