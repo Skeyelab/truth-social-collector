@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { test } from 'node:test';
+import { test } from 'vitest';
 import { buildExtension, toBuiltManifest, buildTargets } from '../scripts/build-extension.mjs';
 
 test('build targets include the extension entry points', () => {

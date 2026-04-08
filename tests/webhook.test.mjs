@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
-import { createRequire } from 'node:module';
+import { test } from 'vitest';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
