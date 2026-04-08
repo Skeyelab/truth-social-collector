@@ -16,6 +16,12 @@ const STORAGE_KEYS = {
   state: 'state',
 };
 
+const ICON_SIZE = 16;
+const ICON_BG_ENABLED = [0, 87, 184, 255];
+const ICON_BG_DISABLED = [148, 163, 184, 255];
+const ICON_GLYPH = [255, 255, 255, 255];
+const ICON_GLYPH_TRANSPARENT = [255, 255, 255, 0];
+
 async function getStored(keys) {
   return await chrome.storage.local.get(keys);
 }
@@ -34,6 +40,7 @@ async function setConfig(patch) {
   const next = { ...current, ...patch };
   await setStored({ [STORAGE_KEYS.config]: next });
   await syncAlarm(next);
+  await syncVisualState(next);
   return next;
 }
 
@@ -42,6 +49,38 @@ async function syncAlarm(config) {
   if (config.enabled) {
     chrome.alarms.create(ALARM_NAME, { periodInMinutes: Math.max(1, Number(config.intervalMinutes) || 15) });
   }
+}
+
+function buildIconImageData(enabled) {
+  const bg = enabled ? ICON_BG_ENABLED : ICON_BG_DISABLED;
+  const data = new Uint8ClampedArray(ICON_SIZE * ICON_SIZE * 4);
+  for (let y = 0; y < ICON_SIZE; y += 1) {
+    for (let x = 0; x < ICON_SIZE; x += 1) {
+      const idx = (y * ICON_SIZE + x) * 4;
+      data.set(bg, idx);
+    }
+  }
+
+  // Simple white vertical mark so the icon isn't just a flat square.
+  for (let y = 3; y < 13; y += 1) {
+    const left = (y * ICON_SIZE + 6) * 4;
+    const right = (y * ICON_SIZE + 9) * 4;
+    data.set(ICON_GLYPH, left);
+    data.set(ICON_GLYPH_TRANSPARENT, left + 4);
+    data.set(ICON_GLYPH_TRANSPARENT, left + 8);
+    data.set(ICON_GLYPH, right);
+  }
+
+  return { [ICON_SIZE]: { width: ICON_SIZE, height: ICON_SIZE, data } };
+}
+
+async function syncActionIcon(config) {
+  if (!chrome.action?.setIcon) return;
+  await chrome.action.setIcon({ imageData: buildIconImageData(Boolean(config.enabled)) });
+}
+
+async function syncVisualState(config) {
+  await syncActionIcon(config);
 }
 
 async function setState(patch) {
@@ -166,11 +205,13 @@ chrome.runtime.onInstalled.addListener(async () => {
   const current = await getConfig();
   await setStored({ [STORAGE_KEYS.config]: current });
   await syncAlarm(current);
+  await syncVisualState(current);
 });
 
 chrome.runtime.onStartup.addListener(async () => {
   const current = await getConfig();
   await syncAlarm(current);
+  await syncVisualState(current);
 });
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
