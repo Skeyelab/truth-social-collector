@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-extension.mjs",
-    "test": "node --test tests/*.mjs"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "esbuild": "^0.25.10"
+    "esbuild": "^0.25.10",
+    "vitest": "^4.1.3"
   }
 }
