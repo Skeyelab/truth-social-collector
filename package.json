@@ -1,0 +1,13 @@
+{
+  "name": "truth-social-collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-extension.mjs",
+    "test": "node --test tests/*.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  }
+}
