@@ -24,3 +24,11 @@ jobs:
         run: yarn test
       - name: Build extension
         run: yarn build
+      - name: Package extension
+        run: zip -r truth-social-collector.zip dist/truth-social-collector/
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: truth-social-collector
+          path: truth-social-collector.zip
+          if-no-files-found: error
