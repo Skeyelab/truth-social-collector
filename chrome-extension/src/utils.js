@@ -45,3 +45,42 @@ export function buildUploadPayload({ trigger, handle, account, newPosts, allPost
     allPosts,
   };
 }
+
+export function isRetryableStatus(status) {
+  return [408, 429, 500, 502, 503, 504].includes(Number(status));
+}
+
+export function formatHttpStatusError(status, label = 'request') {
+  const code = Number(status);
+  if (code === 429) return `${label} was rate limited by Truth Social (HTTP 429)`;
+  if (code === 403) return `${label} was blocked by Truth Social/Cloudflare (HTTP 403)`;
+  if (code === 404) return `${label} was not found (HTTP 404)`;
+  return `${label} failed with HTTP ${code}`;
+}
+
+export async function retryAsync(operation, {
+  maxAttempts = 3,
+  baseDelayMs = 250,
+  backoffFactor = 2,
+  shouldRetry = () => true,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+} = {}) {
+  let attempt = 0;
+  let lastError;
+
+  while (attempt < maxAttempts) {
+    try {
+      return await operation({ attempt: attempt + 1 });
+    } catch (error) {
+      lastError = error;
+      attempt += 1;
+      if (attempt >= maxAttempts || !shouldRetry(error)) {
+        throw error;
+      }
+      const delay = Math.round(baseDelayMs * (backoffFactor ** (attempt - 1)));
+      await sleep(delay);
+    }
+  }
+
+  throw lastError;
+}

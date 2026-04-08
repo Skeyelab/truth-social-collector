@@ -1,3 +1,5 @@
+import { buildUploadPayload, formatHttpStatusError, isRetryableStatus, retryAsync } from './utils.js';
+
 const MAX_DEFAULT_PAGES = 3;
 
 function stripHtml(html) {
@@ -5,15 +7,39 @@ function stripHtml(html) {
   return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
-async function lookupAccount(handle) {
-  const resp = await fetch(`/api/v1/accounts/lookup?acct=${encodeURIComponent(handle)}`, {
-    credentials: 'include',
-    headers: { accept: 'application/json, text/plain, */*' },
+function createHttpError(status, label) {
+  const error = new Error(formatHttpStatusError(status, label));
+  error.status = status;
+  error.retryable = isRetryableStatus(status);
+  return error;
+}
+
+async function fetchJsonWithRetry(url, {
+  label,
+  credentials = 'include',
+  headers = { accept: 'application/json, text/plain, */*' },
+  maxAttempts = 3,
+  baseDelayMs = 300,
+} = {}) {
+  return retryAsync(async () => {
+    const resp = await fetch(url, { credentials, headers });
+    if (!resp.ok) {
+      throw createHttpError(resp.status, label);
+    }
+    return resp.json();
+  }, {
+    maxAttempts,
+    baseDelayMs,
+    shouldRetry: (error) => error?.retryable === true,
   });
-  if (!resp.ok) {
-    throw new Error(`lookup failed: ${resp.status}`);
-  }
-  return resp.json();
+}
+
+async function lookupAccount(handle) {
+  return fetchJsonWithRetry(`/api/v1/accounts/lookup?acct=${encodeURIComponent(handle)}`, {
+    label: `lookup for @${handle}`,
+    maxAttempts: 2,
+    baseDelayMs: 200,
+  });
 }
 
 async function fetchStatuses(accountId, excludeReplies = true, maxPages = 3) {
@@ -25,15 +51,11 @@ async function fetchStatuses(accountId, excludeReplies = true, maxPages = 3) {
     if (excludeReplies) url.searchParams.set('exclude_replies', 'true');
     if (maxId) url.searchParams.set('max_id', maxId);
 
-    const resp = await fetch(url, {
-      credentials: 'include',
-      headers: { accept: 'application/json, text/plain, */*' },
+    const page = await fetchJsonWithRetry(url, {
+      label: `statuses page ${pageIndex + 1}`,
+      maxAttempts: 3,
+      baseDelayMs: 400,
     });
-    if (!resp.ok) {
-      throw new Error(`statuses fetch failed: ${resp.status}`);
-    }
-
-    const page = await resp.json();
     if (!Array.isArray(page) || page.length === 0) break;
 
     const normalized = page.map((post) => ({

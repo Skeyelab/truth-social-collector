@@ -38,7 +38,9 @@ test('toBuiltManifest rewrites extension assets into the dist bundle', () => {
 });
 
 test('buildExtension writes the HTML, CSS, and manifest assets into dist', async () => {
-  const outDir = await buildExtension();
+  const outDir = await buildExtension({
+    bundleScripts: async () => {},
+  });
   assert.ok(existsSync(`${outDir}/manifest.json`));
   assert.ok(existsSync(`${outDir}/popup.html`));
   assert.ok(existsSync(`${outDir}/options.html`));

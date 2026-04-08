@@ -1,4 +1,4 @@
-import { compareIdsDesc, dedupeNewPosts, buildUploadPayload } from './utils.js';
+import { buildUploadPayload, dedupeNewPosts } from './utils.js';
 
 const DEFAULT_CONFIG = {
   handle: 'realDonaldTrump',
@@ -66,7 +66,6 @@ async function collectFromTab(tabId, config) {
   return response.payload;
 }
 
-
 async function uploadWebhook(webhookUrl, payload) {
   if (!webhookUrl) return null;
   const resp = await fetch(webhookUrl, {
@@ -83,7 +82,11 @@ async function uploadWebhook(webhookUrl, payload) {
 async function runCollector(trigger = 'manual') {
   const config = await getConfig();
   if (!config.enabled) {
-    await setState({ lastRunAt: new Date().toISOString(), lastStatus: 'disabled', lastError: '' });
+    await setState({
+      lastRunAt: new Date().toISOString(),
+      lastStatus: 'disabled',
+      lastError: '',
+    });
     return { ok: false, skipped: true, reason: 'disabled' };
   }
 
@@ -119,6 +122,7 @@ async function runCollector(trigger = 'manual') {
 
     await setState({
       lastRunAt: new Date().toISOString(),
+      lastSuccessAt: new Date().toISOString(),
       lastStatus: 'ok',
       lastError: '',
       lastSeenId: newestId,
