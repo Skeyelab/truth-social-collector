@@ -33,17 +33,29 @@ export function dedupeNewPosts(posts, lastSeenId) {
  * @param {object} opts.account  - raw account object returned by the API
  * @param {Array}  opts.newPosts - deduplicated new posts
  * @param {Array}  opts.allPosts - all posts fetched this run
+ * @param {Array}  opts.uploadedPosts - posts selected for upload this run
+ * @param {boolean} opts.uploadAllItems - whether the upload targeted all items
  * @returns {object}
  */
-export function buildUploadPayload({ trigger, handle, account, newPosts, allPosts }) {
+export function buildUploadPayload({ trigger, handle, account, newPosts, allPosts, uploadedPosts, uploadAllItems }) {
   return {
     trigger,
     collectedAt: new Date().toISOString(),
     handle,
     account,
+    uploadAllItems: Boolean(uploadAllItems),
     newPosts,
     allPosts,
+    uploadedPosts,
   };
+}
+
+export function selectUploadPosts({ uploadAllItems = false, newPosts = [], allPosts = [] } = {}) {
+  return uploadAllItems ? [...allPosts] : [...newPosts];
+}
+
+export function shouldUploadWebhook({ webhookUrl, uploadedPosts = [] } = {}) {
+  return Boolean(webhookUrl && uploadedPosts.length);
 }
 
 export function isRetryableStatus(status) {

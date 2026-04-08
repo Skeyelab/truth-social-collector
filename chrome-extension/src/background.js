@@ -1,10 +1,11 @@
-import { buildUploadPayload, dedupeNewPosts } from './utils.js';
+import { buildUploadPayload, dedupeNewPosts, selectUploadPosts, shouldUploadWebhook } from './utils.js';
 
 const DEFAULT_CONFIG = {
   handle: 'realDonaldTrump',
   intervalMinutes: 15,
   enabled: false,
   webhookUrl: '',
+  uploadAllItems: false,
   maxPages: 3,
   excludeReplies: true,
 };
@@ -107,6 +108,12 @@ async function runCollector(trigger = 'manual') {
     const lastSeenId = state[STORAGE_KEYS.state]?.lastSeenId || '';
     const newPosts = dedupeNewPosts(posts, lastSeenId);
     const newestId = posts.length ? String(posts[0].id) : lastSeenId;
+    const uploadedPosts = selectUploadPosts({
+      uploadAllItems: Boolean(config.uploadAllItems),
+      newPosts,
+      allPosts: posts,
+    });
+    const uploadCount = uploadedPosts.length;
 
     const uploadPayload = buildUploadPayload({
       trigger,
@@ -114,9 +121,14 @@ async function runCollector(trigger = 'manual') {
       account: payload.account,
       newPosts,
       allPosts: posts,
+      uploadedPosts,
+      uploadAllItems: Boolean(config.uploadAllItems),
     });
 
-    if (newPosts.length && config.webhookUrl) {
+    if (shouldUploadWebhook({
+      webhookUrl: config.webhookUrl,
+      uploadedPosts,
+    })) {
       await uploadWebhook(config.webhookUrl, uploadPayload);
     }
 
@@ -128,12 +140,14 @@ async function runCollector(trigger = 'manual') {
       lastSeenId: newestId,
       lastCount: posts.length,
       lastNewCount: newPosts.length,
+      lastUploadedCount: uploadCount,
     });
 
     return {
       ok: true,
       count: posts.length,
       newCount: newPosts.length,
+      uploadedCount: uploadCount,
       newestId,
       account: payload.account,
     };

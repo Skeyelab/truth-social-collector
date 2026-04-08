@@ -17,14 +17,18 @@ export function hideBanner() {
   bannerEl.hidden = true;
 }
 
-export function renderState(state) {
+export function renderState(state, config = {}) {
   const s = state.lastStatus || '';
   if (s === 'error') {
     showBanner(`⚠ Error: ${state.lastError || 'unknown error'}`, 'error');
   } else if (s === 'ok') {
-    const msg = state.lastNewCount
-      ? `✓ ${state.lastNewCount} new post(s) uploaded`
-      : '✓ Collected — no new posts';
+    const count = config.uploadAllItems ? state.lastUploadedCount : state.lastNewCount;
+    const label = config.uploadAllItems ? 'post(s) uploaded' : 'new post(s) uploaded';
+    const msg = count
+      ? `✓ ${count} ${label}`
+      : config.uploadAllItems
+        ? '✓ Collected — no posts uploaded'
+        : '✓ Collected — no new posts';
     showBanner(msg, 'ok');
   } else if (s === 'no_truth_tab') {
     showBanner('⚠ No Truth Social tab is open.', 'warning');

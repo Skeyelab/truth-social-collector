@@ -87,6 +87,8 @@ test('buildUploadPayload includes all required fields', () => {
     account,
     newPosts,
     allPosts,
+    uploadedPosts: allPosts,
+    uploadAllItems: true,
   });
 
   assert.equal(payload.trigger, 'manual');
@@ -94,8 +96,10 @@ test('buildUploadPayload includes all required fields', () => {
   assert.ok(typeof payload.collectedAt === 'string', 'collectedAt should be a string');
   assert.ok(!isNaN(Date.parse(payload.collectedAt)), 'collectedAt should be a valid ISO date');
   assert.deepEqual(payload.account, account);
+  assert.equal(payload.uploadAllItems, true);
   assert.deepEqual(payload.newPosts, newPosts);
   assert.deepEqual(payload.allPosts, allPosts);
+  assert.deepEqual(payload.uploadedPosts, allPosts);
 });
 
 test('buildUploadPayload collectedAt is a recent ISO timestamp', () => {
@@ -106,6 +110,8 @@ test('buildUploadPayload collectedAt is a recent ISO timestamp', () => {
     account: {},
     newPosts: [],
     allPosts: [],
+    uploadedPosts: [],
+    uploadAllItems: false,
   });
   const after = Date.now();
   const ts = Date.parse(payload.collectedAt);

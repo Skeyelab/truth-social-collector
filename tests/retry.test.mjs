@@ -12,6 +12,7 @@ const {
   isRetryableStatus,
   retryAsync,
   formatHttpStatusError,
+  selectUploadPosts,
 } = await import(utilsPath);
 
 test('isRetryableStatus returns true for rate limit and transient server errors', () => {
@@ -32,6 +33,20 @@ test('formatHttpStatusError surfaces rate limit and block messages', () => {
   assert.match(formatHttpStatusError(429), /rate limited/i);
   assert.match(formatHttpStatusError(403), /blocked/i);
   assert.match(formatHttpStatusError(500), /http 500/i);
+});
+
+test('selectUploadPosts prefers all posts when uploadAllItems is enabled', () => {
+  const allPosts = [{ id: '3' }, { id: '2' }, { id: '1' }];
+  const newPosts = [{ id: '3' }];
+
+  assert.deepEqual(
+    selectUploadPosts({ uploadAllItems: true, allPosts, newPosts }).map((p) => p.id),
+    ['3', '2', '1'],
+  );
+  assert.deepEqual(
+    selectUploadPosts({ uploadAllItems: false, allPosts, newPosts }).map((p) => p.id),
+    ['3'],
+  );
 });
 
 test('retryAsync retries until the operation succeeds', async () => {
