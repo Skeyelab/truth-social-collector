@@ -18,3 +18,5 @@ build/
 .yarn/install-state.gz
 node_modules/
 package-lock.json
+
+data/backtests/
