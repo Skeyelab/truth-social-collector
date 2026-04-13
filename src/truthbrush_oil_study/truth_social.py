@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from datetime import datetime, timezone
+from html import unescape
 from typing import Iterable
+from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 from dateutil.parser import isoparse
 
@@ -14,6 +18,17 @@ from .models import Post, ThreadContext
 ENV_USERNAME = "TRUTHSOCIAL_USERNAME"
 ENV_PASSWORD = "TRUTHSOCIAL_PASSWORD"
 ENV_TOKEN = "TRUTHSOCIAL_TOKEN"
+TRUMPSTRUTH_URL = "https://trumpstruth.org/"
+TRUMPSTRUTH_TIMEZONE = "America/New_York"
+
+_TRUMPSTRUTH_POST_RE = re.compile(
+    r'href="https://trumpstruth\.org/statuses/(?P<status_id>\d+)"[^>]*>'
+    r'(?P<display_time>[^<]+)</a>.*?'
+    r'href="(?P<orig_url>https://truthsocial\.com/@realDonaldTrump/\d+)"[^>]*>\s*'
+    r'(?:<i[^>]*></i>)?\s*&nbsp;\s*Original Post\s*</a>.*?'
+    r'<div class="status__content"><p>(?P<content>.*?)</p>',
+    re.S,
+)
 
 
 def normalize_post(raw: dict) -> Post:
@@ -41,6 +56,7 @@ def normalize_post(raw: dict) -> Post:
 
 def load_truthsocial_env(base_env: dict[str, str] | None = None) -> dict[str, str]:
     env = dict(base_env or os.environ)
+
     token = env.get(ENV_TOKEN)
     username = env.get(ENV_USERNAME)
     password = env.get(ENV_PASSWORD)
@@ -110,6 +126,53 @@ def fetch_user_statuses(
         for raw_post in _extract_posts_from_page(page):
             posts.append(normalize_post(raw_post))
     return posts
+
+
+def _fetch_trumpstruth_html(url: str) -> str:
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urlopen(request, timeout=20) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def _parse_trumpstruth_timestamp(display_time: str) -> datetime:
+    naive = datetime.strptime(display_time.strip(), "%B %d, %Y, %I:%M %p")
+    local_dt = naive.replace(tzinfo=ZoneInfo(TRUMPSTRUTH_TIMEZONE))
+    return local_dt.astimezone(timezone.utc)
+
+
+def _strip_html(fragment: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", fragment)
+    return " ".join(unescape(text).split())
+
+
+def parse_trumpstruth_homepage(html_text: str, *, limit: int | None = None) -> list[Post]:
+    posts: list[Post] = []
+    for match in _TRUMPSTRUTH_POST_RE.finditer(html_text):
+        status_id = match.group("status_id")
+        display_time = match.group("display_time")
+        original_url = match.group("orig_url")
+        content_html = match.group("content")
+        post = Post(
+            id=status_id,
+            created_at=_parse_trumpstruth_timestamp(display_time),
+            text=_strip_html(content_html),
+            url=original_url,
+            raw={
+                "source": "trumpstruth.org",
+                "status_url": f"https://trumpstruth.org/statuses/{status_id}",
+                "display_time": display_time,
+                "original_url": original_url,
+            },
+        )
+        posts.append(post)
+        if limit is not None and len(posts) >= limit:
+            break
+    return posts
+
+
+def fetch_trumpstruth_posts(*, limit: int = 20, url: str = TRUMPSTRUTH_URL) -> list[Post]:
+    html_text = _fetch_trumpstruth_html(url)
+    return parse_trumpstruth_homepage(html_text, limit=limit)
 
 
 def _build_api(env: dict[str, str] | None = None):
